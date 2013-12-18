@@ -1,0 +1,28 @@
+% How WebKitGTK Load A WebPage
+% leeight
+% 2010-12-20
+
+
+1.  webkit_web_frame_load_uri(WebKitWebFrame* frame, const gchar* uri)
+2.  FrameLoader::load(const ResourceRequest& request, bool lockHistory)
+3.  FrameLoader::load(const ResourceRequest& request, const SubstituteData& substituteData, bool lockHistory)
+4.  创建一个DocumentLoader（临时的）
+5.  FrameLoader::load(DocumentLoader* newDocumentLoader)
+    * addExtraFieldsToMainResourceRequest(ResourceRequest& request)
+      * 设置一下UserAgent，是FrameLoaderClient根据URL提供的，每个平台的实现是不一样的
+      * 根据请求的类型，设置不同的Cache策略
+      * 对于`mainResource`，设置一下Request Header中的`Accept`字段的默认值，这里需要注意的是，对于启用了`XHTMLMP`和没有启用
+        的时候，defaultAcceptHeader的值是不一样的。
+      * 一定条件下设置`Request Header`中的`Origin`字段
+6.  FrameLoader::loadWithDocumentLoader(DocumentLoader* loader, FrameLoadType type, PassRefPtr<FormState> prpFormState)
+7.  中间是很长的处理步骤....
+8.  DocumentLoader::startLoadingMainResource(unsigned long identifier)
+    * 创建MainResourceLoader
+    * 调用MainResourceLoader->load方法
+
+* ResourceHandleClient
+  * ResourceLoader
+    * MainResourceLoader
+
+FrameLoader和FrameLoaderClient中定义的接口有些相似，只是FrameLoader把大部分的实现交给FrameLoaderClient来完成（delegate），FrameLoaderClient
+的实现则是编译的时候和平台相关。不同的平台提供一个不同的实现。

@@ -1,0 +1,14 @@
+html,body { background:#e8e7e3 url('index-background.png'); }
+#content { position:relative; visibility:hidden; z-index:1; }
+.cell { -moz-border-radius:3px; -webkit-border-radius:3px; background:#fff; border-radius:3px; position:absolute; }
+.cell h3 { color:#fff; line-height:30px; margin:0; padding:2px; text-align:center; text-shadow:#000 0 1px 3px; }
+.cell:hover { -moz-box-shadow:0 0 6px #999; -moz-transition:0 0.2s ease-out; -o-transition:0 0.2s ease-out; -webkit-box-shadow:0 0 6px #999; -webkit-transition:0 0.2s ease-out; box-shadow:0 0 6px #999; transition:box-shadow 0.2s ease-out; }
+.cell-body { padding:10px; }
+.cell-body table { width: 100%; } /* for douban */
+.cell-body ul { list-style:none; margin:0; padding:0; }
+.cell-body ul ul { margin-left:2em; }
+.cell-body sup { color:#d12626; }
+.blink { color:#00f; }
+.blink .highlight { color:red; }
+.hover-link a,.cell-body a { display:block; line-height:24px; zoom:1px; }
+.hover-link a:hover,.cell-body a:hover { background:#f7f6f2; }
