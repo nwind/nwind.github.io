@@ -4,8 +4,7 @@ title: 浏览器的加载过程
 tags: [browser]
 ---
 
-* Will be replaced with the ToC
-{:toc}
+**请注意，这篇文章是在2010年末写的，里面有些内容可能已经过时，当时我的了解也不够深入，预计会在2014年重写**
 
 本文将探讨浏览器渲染的loading过程，主要有2个目的：
 

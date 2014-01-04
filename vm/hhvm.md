@@ -1,6 +1,6 @@
 ---
 layout: post
-title: HHVM 的实现及性能优化
+title: HHVM 是如何优化 PHP 性能的
 tags: [vm, javascript]
 ---
 
@@ -59,20 +59,24 @@ Facebook 也调研过方案2，甚至还出现过这方面的[传闻](http://ner
 
 方案3是 HPHPc（HHVM 的前身）的做法，它的原理是将 PHP 代码转成 C++，然后编译为本地文件，可以认为是一种 AOT（ahead of time）的方式，关于其中代码转换的技术细节可以参考 [The HipHop Compiler for PHP](http://dl.acm.org/citation.cfm?id=2384658)，以下是该论文中的一个截图，可以通过它来简单了解：
 
-![hhvm](hiphop-vm.png)
+<div class="post-img"><img src="hiphop-vm.png" /></div>
 
 这种做法的最大优点是实现简单（相对于一个 VM 来说），而且能做很多编译优化（因为是离线的），比如上面的例子就将` - 1`优化掉了，但它很难支持 PHP 中的很多动态的方法，如 eval()、create_function()，除非再内嵌一个 interpreter，所以 HPHPc 并不支持这些动态语法
 
 除了 HPHPc，还有两个类似的项目，一个是 [Roadsend](http://www.roadsend.com/)，另一个叫 [phc](http://phpcompiler.org/) ，phc 是将 PHP 转成了 C 再编译，以下是它将 `file_get_contents($f)`+` 转成 C 代码的例子：
 
-    static php_fcall_info fgc_info; 
-    php_fcall_info_init ("file_get_contents", &fgc_info);
-    php_hash_find (LOCAL_ST, "f", 5863275, &fgc_info.params);
-    php_call_function (&fgc_info);
+``` c
+static php_fcall_info fgc_info;
+php_fcall_info_init ("file_get_contents", &fgc_info);
+php_hash_find (LOCAL_ST, "f", 5863275, &fgc_info.params);
+php_call_function (&fgc_info);
+```
 
 话说 [phc 作者曾经在博客上哭诉](http://blog.paulbiggar.com/archive/a-rant-about-php-compilers-in-general-and-hiphop-in-particular/#bottom)，说他两年前就去 Facebook 演示过 phc 了，还和他们的工程师交流，结果人家一发布就火了，而自己忙活了4年却默默无闻，基本上前途渺茫。。。于是后来他去 Mozilla 优化 SpiderMonkey 了
 
 Roadsend 也已经不维护了，对于 PHP 这样的动态语言来说，这种做法有很多的局限性，由于无法动态 include，Facebook 将所有文件都编译到了一起，上线时的文件部署居然达到了 1G，越来越不能忍了
+
+另外有一个叫 [PHP QB](https://github.com/chung-leong/qb) 的东东，由于时间关系我没有看，从代码更新来看感觉没怎么维护，估计不靠谱
 
 所以就只剩下一条路了，那就是写一个更快的 PHP 虚拟机，将一条黑路走到底，或许你也和我一样，一开始听到这个想法时觉得太离谱，但如果站在 Facebook 的角度仔细想想就会发现其实也只能这样了
 
@@ -80,7 +84,7 @@ Roadsend 也已经不维护了，对于 PHP 这样的动态语言来说，这种
 
 HHVM 为什么更快？在各种新闻报道中都提到了 JIT，其实远没有那么简单，JIT 不是什么神奇的魔法棒，用它轻轻一挥就能一下神奇地提升性能的，而且 JIT 这个操作本身也是会耗时的，对于简单的程序没准还比 interpreter 慢，最极端的例子是 [LuaJIT 2](http://lua-users.org/lists/lua-l/2010-03/msg00305.html) 的 Interpreter 就稍微比 V8 的 JIT 快，所以并不存在绝对的事情，更多还是在细节问题的处理上，HHVM 的发展历史就是不断优化的历史，你可以从下图看到它是一点点超过 HPHPc 的
 
-![hhvm-vs-hhpc](hhvm-vs-hhpc.jpg)
+<div class="post-img"><img src="hhvm-vs-hhpc.jpg" /></div>
 
 话说在 Android 4.4 中新的虚拟机 ART 就采用的是 AOT 方案（还记得么？前面提到的 HPHPc 就是这种），结果比之前使用 JIT 的 Dalvik 快了一倍，所以 JIT 也不一定比 AOT 快
 
@@ -120,9 +124,10 @@ HHVM 为什么更快？在各种新闻报道中都提到了 JIT，其实远没�
 
 Interpreter 的主体实现在 [bytecode.cpp](https://github.com/facebook/hhvm/blob/master/hphp/runtime/vm/bytecode.cpp) 中，比如 `VMExecutionContext::iopAdd` 这样的方法，最终执行会根据不同类型来区分，比如 add 操作的实现是在 [tv-arith.cpp](https://github.com/facebook/hhvm/blob/master/hphp/runtime/base/tv-arith.cpp) 中，下面摘抄其中的一小段
 
-    :::c++
-    if (c2.m_type == KindOfInt64)  return o(c1.m_data.num, c2.m_data.num);
-    if (c2.m_type == KindOfDouble) return o(c1.m_data.num, c2.m_data.dbl);
+{% highlight c++ %}
+if (c2.m_type == KindOfInt64)  return o(c1.m_data.num, c2.m_data.num);
+if (c2.m_type == KindOfDouble) return o(c1.m_data.num, c2.m_data.dbl);
+{% endhighlight %}
 
 正是因为有了 Interpreter，HHVM 在对于 PHP 语法的支持上比 HPHPc 有明显改进，理论上做到完全兼容官方 PHP 是可行的，但仅这么做在性能并不会比 Zend 好多少，由于无法确定变量类型，所以需要加上类似上面的条件判断语句，但这样的代码不利于现代 CPU 的执行优化，另一个问题是数据都是 boxed 的，每次读取都需要通过类似 `m_data.num` 和 `m_data.dbl` 的方法来间接获取
 
@@ -140,19 +145,20 @@ Interpreter 的主体实现在 [bytecode.cpp](https://github.com/facebook/hhvm/b
 
 在动态语言中基本上都会有 eval 方法，可以将一段字符串传给它来执行，JIT 做的就是类似的事情，只不过它要拼接不是字符串，而是不同平台下的机器码，然后进行执行，那么如何用 C 实现一个简单的 JIT 呢？最近 Eli 写了[一个入门例子](http://eli.thegreenplace.net/2013/11/05/how-to-jit-an-introduction/)，感兴趣可以去看看，以下是文中的一段代码：
 
-    ::c++
-    unsigned char code[] = {
-      0x48, 0x89, 0xf8,                   // mov %rdi, %rax
-      0x48, 0x83, 0xc0, 0x04,             // add $4, %rax
-      0xc3                                // ret
-    };
-    memcpy(m, code, sizeof(code));
+``` c++
+unsigned char code[] = {
+  0x48, 0x89, 0xf8,                   // mov %rdi, %rax
+  0x48, 0x83, 0xc0, 0x04,             // add $4, %rax
+  0xc3                                // ret
+};
+memcpy(m, code, sizeof(code));
+```
 
 然而手工编写机器码很容易出错，所以最好的有一个辅助的库，比如的 Mozilla 的 [Nanojit](https://developer.mozilla.org/en-US/docs/Nanojit) 以及 LuaJIT 的 [DynASM](http://luajit.org/dynasm.html)，但 HHVM 并没有使用这些，而是自己实现了一个只支持 x64 的（另外还在尝试用 [VIXL](https://github.com/armvixl/vixl) 来生成 ARM 64 位的），通过 mprotect 的方式来让代码可执行
 
 但为什么 JIT 代码会更快？用 C++ 编写的代码最终编译出来的也是机器码，如果只是将同样的代码手动转成了机器码，那和 GCC 生成出来的有什么区别呢？虽然前面我们提到了一些针对 CPU 实现原理来优化的技巧，但其实更重要的优化是根据类型来生成特定的指令，从而大幅减少指令数，下面这张来自 [TraceMonkey](https://hacks.mozilla.org/2009/07/tracemonkey-overview/) 的图对此进行了很直观的对比，后面我们将看到 HHVM 中的具体例子
 
-![TraceMonkey](tracemonkey.png)
+<div class="post-img"><img src="tracemonkey.png" /></div>
 
 那什么时候开始使用 JIT 呢？常见的 JIT 触发条件有2种：
 
@@ -163,7 +169,9 @@ Interpreter 的主体实现在 [bytecode.cpp](https://github.com/facebook/hhvm/b
 
 它们之间的区别不仅仅是编译范围，还有很多细节问题，比如对局部变量的处理，在这里就不展开了
 
-但 HHVM 并没有采用这两种方式，而是自创了一个叫 [tracelet](https://news.ycombinator.com/item?id=4856099) 的名词，它是根据类型来划分的，看下面这张图![tracelet](tracelet.png)
+但 HHVM 并没有采用这两种方式，而是自创了一个叫 [tracelet](https://news.ycombinator.com/item?id=4856099) 的名词，它是根据类型来划分的，看下面这张图
+
+<div class="post-img"><img src="tracelet.png" /></div>
 
 可以看到它将一个函数划分为了3个部分，上面2个部分是用于处理 `$k` 为整数或字符串两种不同情况的，下面的部分是返回值，所以看起来它主要是根据类型的变化情况来划分 JIT 区域的，具体是如何分析和拆解 Tracelet 的细节可以查看 [Translator.cpp](https://github.com/facebook/hhvm/blob/master/hphp/runtime/vm/jit/translator.cpp) 中的 `Translator::analyze` 方法，我还没空看，这里就不讨论了
 
@@ -173,50 +181,54 @@ JIT 的执行过程是首先将 HHBC 转成 SSA (hhbc-translator.cpp)，然后�
 
 我们用一个简单的例子来看看 HHVM 最终生成的机器码是怎样的，比如下面这个 PHP 函数
 
-    :::php
-    function a($b){
-      echo $b + 2;
-    }
+``` php
+<?php
+function a($b){
+  echo $b + 2;
+}
+```
 
 编译后是这个样子
 
-    :::assembly
-    mov rcx,0x7200000
-    mov rdi,rbp
-    mov rsi,rbx
-    mov rdx,0x20
-    call 0x2651dfb <HPHP::Transl::traceCallback(HPHP::ActRec*, HPHP::TypedValue*, long, void*)>
-    cmp BYTE PTR [rbp-0x8],0xa
-    jne 0xae00306
-    ; 前面是检查参数是否有效
+``` nasm
+mov rcx,0x7200000
+mov rdi,rbp
+mov rsi,rbx
+mov rdx,0x20
+call 0x2651dfb <HPHP::Transl::traceCallback(HPHP::ActRec*, HPHP::TypedValue*, long, void*)>
+cmp BYTE PTR [rbp-0x8],0xa
+jne 0xae00306
+; 前面是检查参数是否有效
 
-    mov rcx,QWORD PTR [rbp-0x10]           ; 这里将 %rcx 被赋值为1了
-    mov edi,0x2                            ; 将 %edi（也就是 %rdi 的低32位）赋值为2
-    add rdi,rcx                            ; 加上 %rcx
-    call 0x2131f1b <HPHP::print_int(long)> ; 调用 print_int 函数，这时第一个参数 %rdi 的值已经是3了
+mov rcx,QWORD PTR [rbp-0x10]           ; 这里将 %rcx 被赋值为1了
+mov edi,0x2                            ; 将 %edi（也就是 %rdi 的低32位）赋值为2
+add rdi,rcx                            ; 加上 %rcx
+call 0x2131f1b <HPHP::print_int(long)> ; 调用 print_int 函数，这时第一个参数 %rdi 的值已经是3了
 
-    ; 后面暂不讨论
-    mov BYTE PTR [rbp+0x28],0x8
-    lea rbx,[rbp+0x20]
-    test BYTE PTR [r12],0xff
-    jne 0xae0032a
-    push QWORD PTR [rbp+0x8]
-    mov rbp,QWORD PTR [rbp+0x0]
-    mov rdi,rbp
-    mov rsi,rbx
-    mov rdx,QWORD PTR [rsp]
-    call 0x236b70e <HPHP::JIT::traceRet(HPHP::ActRec*, HPHP::TypedValue*, void*)>
-    ret 
+; 后面暂不讨论
+mov BYTE PTR [rbp+0x28],0x8
+lea rbx,[rbp+0x20]
+test BYTE PTR [r12],0xff
+jne 0xae0032a
+push QWORD PTR [rbp+0x8]
+mov rbp,QWORD PTR [rbp+0x0]
+mov rdi,rbp
+mov rsi,rbx
+mov rdx,QWORD PTR [rsp]
+call 0x236b70e <HPHP::JIT::traceRet(HPHP::ActRec*, HPHP::TypedValue*, void*)>
+ret 
+```
 
 而 HPHP::print_int 函数的实现是这样的
 
-    :::c++
-    void print_int(int64_t i) {
-      char buf[256];
-      snprintf(buf, 256, "%" PRId64, i);
-      echo(buf);
-      TRACE(1, "t-x64 output(int): %" PRId64 "\n", i);
-    }
+``` c++
+void print_int(int64_t i) {
+  char buf[256];
+  snprintf(buf, 256, "%" PRId64, i);
+  echo(buf);
+  TRACE(1, "t-x64 output(int): %" PRId64 "\n", i);
+}
+```
 
 可以看到 HHVM 编译出来的代码直接使用了 int64_t，避免了 interpreter 中需要判断参数和间接取数据的问题，从而明显提升了性能，最终和 C 编译出来的代码区别不大
 
@@ -230,16 +242,17 @@ JIT 的执行过程是首先将 HHBC 转成 SSA (hhbc-translator.cpp)，然后�
 
 JIT 的关键是猜测类型，经常变化的类型是很难优化的，如果类型固定将很有利于 HHVM 优化，于是 HHVM 的工程师在 PHP 语法上做手脚，加上类型的支持，推出了一个新语言 - Hack（这名字真不利于 SEO），它的样子如下：
 
-    :::php
-    <?hh
-    class Point2 {
-      public float $x, $y;
-      function __construct(float $x, float $y) {
-        $this->x = $x;
-        $this->y = $y;
-      }
-    }
-    来自：https://raw.github.com/strangeloop/StrangeLoop2013/master/slides/sessions/Adams-TakingPHPSeriously.pdf
+``` php
+<?hh
+class Point2 {
+  public float $x, $y;
+  function __construct(float $x, float $y) {
+    $this->x = $x;
+    $this->y = $y;
+  }
+}
+//来自：https://raw.github.com/strangeloop/StrangeLoop2013/master/slides/sessions/Adams-TakingPHPSeriously.pdf
+```
 
 注意到 `float` 关键字了么？有了静态类型可以让 HHVM 更好地优化性能，但这也意味着和 PHP 语法不兼容，只能使用 HHVM 了
 
@@ -251,9 +264,8 @@ JIT 的关键是猜测类型，经常变化的类型是很难优化的，如果�
 
 性能究竟能提升多少我无法确定，需要拿自己的业务代码来进行真实测试，这样才能真正清楚 HHVM 能带来多少收益，尤其是对整体性能提升到底有多少，只有拿到这个数据才能做决策
 
-最后整理一下可能会遇到的问题，有计划使用的产品线可以参考：
+最后整理一下可能会遇到的问题，有计划使用的可以参考：
 
-* 系统环境问题：目前 HHVM 官方只支持 Ubuntu、Debian 等几个最新的系统，公司的标准环境目前还没人成功编译过，因为用到了 C++ 11 中的特性，所以最好用 GCC 4.8，另外即便编译出来恐怕也会有问题，所以换系统几乎是必须的，这个问题需要提前考虑
 * PHP 语法兼容性问题：从目前官方的测试来看有10%的例子还没通过，如果用到这些不支持的语法就得换种写法，具体细节我不太清楚，需要具体应用具体分析，从 HHVM [最近的更新](http://www.hhvm.com/blog/1301/hhvm-2-2-0)来看，它还在不断修复重要的问题，所以预计明年才能真正稳定可用
 * 扩展问题：如果用到了 PHP 扩展，肯定是要重写的，不过 HHVM 扩展写起来比 Zend 要简单的多，具体细节可以看 [wiki 上的例子](https://github.com/facebook/hhvm/wiki/Extension-API)
 * HHVM Server 的稳定性问题：这种多线程的架构运行一段时间可能会出现内存泄露问题，或者某个没写好的 PHP 直接导致整个进程挂掉，所以需要注意这方面的测试和容灾措施

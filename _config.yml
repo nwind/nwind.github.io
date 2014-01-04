@@ -3,7 +3,7 @@ destination: ./_site
 plugins:     ./_plugins
 lsi:      false
 safe:     false
-markdown: kramdown
+markdown: redcarpet
 pygments: true
 permalink: pretty
 paginate: 20
@@ -11,9 +11,5 @@ paginate: 20
 post_defaults:
   layout: post
 
-kramdown:
-  auto_ids: true
-  footnote_nr: 1
-  entity_output: as_char
-  toc_levels: 2..6
-  use_coderay: false
+redcarpet:
+  extensions: ["tables", "autolink"]
