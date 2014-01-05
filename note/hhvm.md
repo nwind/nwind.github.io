@@ -1,6 +1,6 @@
 ---
 layout: post
-title: HHVM 是如何优化 PHP 性能的
+title: HHVM 是如何提升 PHP 性能的？
 tags: [vm, javascript]
 ---
 
@@ -116,7 +116,7 @@ HHVM 为什么更快？在各种新闻报道中都提到了 JIT，其实远没�
 
 这点和 Java 不同，写个 Java 的虚拟机只需实现字节码解释及一些基础的 JNI 调用，内置库都是 Java 实现的，所以如果不考虑优化，单从工作量看，实现 PHP 虚拟机比 JVM 还难，比如就有人用8千行的 TypeScript 实现了一个 [JVM Doppio](https://github.com/int3/doppio)
 
-对于这个问题，HHVM 的解决办法简单粗暴，那就是只实现 Facebook 中用到的，而是
+对于这个问题，HHVM 的解决办法很简单，那就是只实现 Facebook 中用到的，所以这个问题还不算太麻烦
 
 ### 实现 Interpreter
 
