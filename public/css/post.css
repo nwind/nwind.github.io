@@ -50,9 +50,6 @@ ul {
 ol {
     list-style: decimal;
 }
-li {
-    color: #555;
-}
 dl dt {
     font-weight: 700;
 }
