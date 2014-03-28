@@ -9,7 +9,7 @@ title: 八卦某 G 的前端开发方式及流程
 
 注意：以下内容主要信息来自网上收集、『In The Plex』这本书及闲聊，纯粹为了技术交流和讨论，本人从未在某 G 工作过，不受 NDA 限制，但所有信息无法确认真伪，加上信息不足，所以这里所看到的结论肯定很片面，欢迎提供更多内幕。
 
-## 工程师分工
+## 分工协作
 
 首先，某 G 大部分产品线都不区分前端工程师和后端工程师，一个人需要用从前到后都负责开发，不过这几年似乎有变化，能看到专门的 [Front End](https://www.google.com/about/careers/search/#t=sq&q=j&d=Front+End&li=10&j=Front+End&) 职位了，但应该是很少数产品线的做法，具体情况未知。
 
@@ -161,7 +161,7 @@ N 年前有人去 G 面试过，和他闲聊后了解到某 G 要求应聘者必
 这里说一下 Chromium 项目中观察到的工具使用情况：
 
 * 网站是基于 [Sites](https://sites.google.com) 搭建的
-* 设计文档喜欢使用 Doc，因为可以在线编辑和评论功能，所以多人协作会很方便
+* 设计文档喜欢使用 Docs，因为可以在线编辑和评论功能，所以多人协作会很方便
 * https://codereview.chromium.org/
 * 在 [Groups](http://groups.google.com/a/chromium.org/group/chromium-discuss) 中进行讨论
 * 使用 [code](https://code.google.com/p/chromium/issues/) 来管理 issues
@@ -183,6 +183,9 @@ N 年前有人去 G 面试过，和他闲聊后了解到某 G 要求应聘者必
 * 文档及相关资料和代码放一起
     * 这能保证找起来很方便
     * 如果由于种种原因不能放一起，至少也要放链接
+* 外部产品的内网版，比如 Docs
+    * 典型的 Eating your own dog food 思路
+    * 在内网提前测试外部产品的新功能，而且一般内部人员都会很积极地反馈问题，对产品改进很有帮助
 * GWT 的静态检查机制
-    * 整理这篇文章后让我重新思考了静态类型的优点，后续计划尝试 TypeScript
+    * 整理这篇文章时我发现 TypeScript 也已经接近 1.0 版本了，看起来时机终于快到了，后续计划尝试 TypeScript
 
