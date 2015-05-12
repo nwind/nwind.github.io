@@ -276,7 +276,7 @@ pipelining是HTTP/1.1协议中的一个技术，能让多个HTTP请求同时通�
 
 下图来自[Asynchronous and deferred JavaScript execution explained](http://peter.sh/experiments/asynchronous-and-deferred-javascript-execution-explained/)，清晰地解释了普通情况和这2种情况下的区别
 
-![defer-async](/browser/what-happen-when-browser-loading-the-page/defer-async.jpg)
+![defer-async](/note/what-happen-when-browser-loading-the-page/defer-async.jpg)
 
 需要注意的是这两个属性目前对于内嵌的js是无效的
 
@@ -345,7 +345,7 @@ gwt中的js压缩还针对gzip进行了优化，进一步减小传输的体积�
 
 传统的页面分析方法是通过javascript的时间来计算，无法获取页面在网络及渲染上所花的时间，使用Navigation Timing就能很好地解决这个问题，具体它能取到哪些数据可以通过下图了解（来自w3c）
 
-![timing-overview](/browser/what-happen-when-browser-loading-the-page/timing-overview.png)
+![timing-overview](/note/what-happen-when-browser-loading-the-page/timing-overview.png)
  
 目前这个api较新，目前只在一些比较新的浏览器上有支持，如Chrome、IE9，但也占用一定的市场份额了，可以现在就用起来
 
